@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class TaskCreate(BaseModel):
     title : str
@@ -10,3 +11,8 @@ class TaskResponse(TaskCreate):
     status :str
     user_id : int
          
+class TaskUpdate (BaseModel):
+    title : Optional[str] = None
+    description : Optional[str] = None
+    priority :Optional[str] = None   
+    status : Optional[str] = None    

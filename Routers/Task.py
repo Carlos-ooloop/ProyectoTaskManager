@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from models.user import User
 from models.Task import Task
-from schemas.Task import TaskCreate, TaskResponse
+from schemas.Task import TaskCreate, TaskResponse,TaskUpdate
 from schemas.user import UserCreate,UserResponse,UserUpdate
 from utils.auth import hash_password , admin_required , auth_user
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
 @router.post("/", response_model= TaskResponse)
-async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Depends(auth_user)):
+async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Depends(admin_required)):
     
     existing_task = db.query(Task).filter(Task.title == task.title, Task.user_id == user.id)
     if existing_task:
@@ -26,5 +26,57 @@ async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Dep
     db.refresh(new_task)
     
     return new_task
+
+
+
+@router.get("/", response_model=list[TaskResponse])
+async def get_all_tasks(current_user:User = Depends(auth_user), db : Session = Depends(get_db)):
+    
+    tasks = db.query(Task).filter(Task.user_id == current_user.id).all()
+    
+    return tasks
+
+@router.get("/{id}", response_model=TaskResponse, dependencies=[Depends(auth_user)])
+async def get_single_task(id:int,current_user: User, db:Session = Depends(get_db)):
+    
+    task = db.query(Task).filter(Task.id==id).first()
+    if not task:
+        raise HTTPException(status_code=404,detail="TASK NOT FOUND")
+    if task.user_id != current_user.id:
+        raise HTTPException(status_code=403,detail="NOT AUTHORIZED")
+    
+    return task
+    
+@router.put("/{id}", response_model=TaskResponse)
+async def act_task(id:int,task_update :TaskUpdate,current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
+    
+    task = db.query(Task).filter(Task.id == id).first() 
+    if not task:
+        raise HTTPException(status_code=404, detail="TASK NOT FOUND")
+    if task.user_id != current_user.id:
+        raise HTTPException(status_code= 403,detail="NOT AUTHORIZED")   
+    if task_update.title:
+     task.title = task_update.title
+    if task_update.priority:
+     task.priority = task_update.priority
+    if task_update.description:
+     task.description = task_update.description
+    
+    db.commit()
+    db.refresh(task)
+    
+    return task
+
+@router.delete("/{id}")
+async def delete_task(id:int,current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
+    
+    task  = db.query(Task).filter(Task.id == id).first()
+    if not task:
+        raise HTTPException(status_code= 404, detail="TASK NOT FOUND")
+    if task.user_id != current_user.id:
+        raise HTTPException(status_code= 403,detail="NOT AUTHORIZED")   
+    db.delete(task)    
+    db.commit()
+    return {"TASK ELIMINATED SUCCESSFULLY"}
     
     

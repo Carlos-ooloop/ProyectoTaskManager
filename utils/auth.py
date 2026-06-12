@@ -100,6 +100,45 @@ async def refres_token(refresh_token:RefreshTokenRequest, db:Session = Depends(g
     expiracion = datetime.utcnow()+timedelta(minutes= TOKEN_DURATION)    
     new_access_token = {"sub":user.username , "exp": expiracion}
     return { "ACCESS_TOKEN": jwt.encode(new_access_token,SECRET,algorithm=ALGORITHM),"TOKEN_TYPE":"BEARER"}
+
+
+@router.put("/make-admin/{id}")
+async def make_admin(current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
+    
+    user = db.query(User).filter(User.id == current_user.id).first() 
+    
+    if not user:
+        raise HTTPException(status_code= 404, detail="USER NOT FOUND")
+    
+    if user.role == "admin":
+        raise HTTPException(status_code=400, detail="USER IS ALREADY ADMIN")
+    
+    user.role = "admin"
+    db.commit()
+    db.refresh(user)
+    
+    return {"INFO":f"{user.username} IS NOW ADMIN",
+            "PROMOTED_BY":current_user.username}
+    
+    
+@router.put("/remove-admin/{id}")
+async def remove_admin(current_user:User = Depends(admin_required), db:Session=Depends(get_db)):
+    
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="USER NOT FOUND")
+    if user.role == "user":
+        raise HTTPException(status_code=400, detail="USER IS NOT AN ADMIN ")
+    if current_user.id == user.id:
+        raise HTTPException(status_code=400,detail="YOU CANNOT REMOVE YOUR OWN ADMIN ROLE")
+    
+    user.role = "user"
+    db.commit()
+    db.refresh(user)
+    
+    return {"INFO":f"{user.username} IS NO LONGER AN ADMIN",
+            "REMOVED_BY":current_user.username}
+    
     
     
     
