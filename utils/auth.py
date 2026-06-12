@@ -6,6 +6,8 @@ from fastapi.security import OAuth2AuthorizationCodeBearer, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.user import User
+from models.refreshtoken import RefreshTokenRequest
+from schemas.user import UserResponse
 
 router = APIRouter()
 SECRET = "c58c87349fe778beecdd92f9cd3467d1cf0fb829b747dac15787cc44d61e3298"
@@ -52,6 +54,52 @@ async def login(form:OAuth2PasswordRequestForm = Depends(), db:Session=Depends(g
     return {"ACCESS_TOKEN": acces_token, "REFRESH_TOKEN": refresh_token, "TOKEN_TYPE":"BEARER"}
 
 
+
+
+@router.post("/login/auth")
+async def auth_user(token:str = Depends(oauth), db:Session=Depends(get_db)):
+    if not token:
+        raise HTTPException(status_code=401,detail="TO GET ACCESS TO THIS RESOURCES YOU MUST BE AUTENTIFIED")
+    try:
+     username = jwt.decode(token,SECRET,algorithms=ALGORITHM).get("sub")
+     if username == None:
+        raise HTTPException(status_code=401,detail="THIS CREDENTIALS HAS NO VALUE")
+    except JWTError:
+        raise HTTPException(status_code=401,detail="THIS CREDENTIALS HAS NO VALUE")
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="USER NOT FOUND")
+       
+    return user
+    
+    
+    
+@router.get("/me", response_model= UserResponse)
+async def me(user_auth:User = Depends(auth_user)):
+    return user_auth
+
+
+async def admin_required(current_user:User = Depends(auth_user)):
+ if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="YOU NEDD ADMIN PERMISSION TO ACCESS TO THIS RESOURCES")
+ return current_user
+
+@router.post("/refresh")
+async def refres_token(refresh_token:RefreshTokenRequest, db:Session = Depends(get_db)):
+    try:
+        refreshtoken = jwt.decode(refresh_token.refresh_token,SECRET,algorithms=ALGORITHM)
+    except JWTError:
+        raise HTTPException(status_code=401,detail="INVALID REFRESH TOKEN")
+    
+    username = refreshtoken.get("sub")
+    user = db.query(User).filter(User.username == username).first()
+    
+    if user is None:
+        raise HTTPException(status_code= 401,detail="USER NOT FOUND") 
+    
+    expiracion = datetime.utcnow()+timedelta(minutes= TOKEN_DURATION)    
+    new_access_token = {"sub":user.username , "exp": expiracion}
+    return { "ACCESS_TOKEN": jwt.encode(new_access_token,SECRET,algorithm=ALGORITHM),"TOKEN_TYPE":"BEARER"}
     
     
     
