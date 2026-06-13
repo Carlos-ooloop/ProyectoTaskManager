@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.user import User
-from models.Task import Task
-from schemas.Task import TaskCreate, TaskResponse,TaskUpdate
-from schemas.user import UserCreate,UserResponse,UserUpdate
+from models.user_model import User
+from models.Task_model import Task
+from schemas.Task_schema import TaskCreate, TaskResponse,TaskUpdate
+from schemas.user_schema import UserCreate,UserResponse,UserUpdate
 from utils.auth import hash_password , admin_required , auth_user
 
 

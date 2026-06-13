@@ -1,5 +1,5 @@
 from db.database import SessionLocal
-from models.user import User
+from models.user_model import User
 from utils.auth import hash_password
 
 def create_admin():

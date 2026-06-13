@@ -5,9 +5,9 @@ from fastapi import Depends, HTTPException, APIRouter
 from fastapi.security import OAuth2AuthorizationCodeBearer, OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.user import User
-from models.refreshtoken import RefreshTokenRequest
-from schemas.user import UserResponse
+from models.user_model import User
+from models.refreshtoken_model import RefreshTokenRequest
+from schemas.user_schema import UserResponse
 
 router = APIRouter()
 SECRET = "c58c87349fe778beecdd92f9cd3467d1cf0fb829b747dac15787cc44d61e3298"
