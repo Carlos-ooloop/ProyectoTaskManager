@@ -33,23 +33,24 @@ async def get_my_task(current_user:User = Depends(auth_user)):
     return current_user.tasks
 
 @router.get("/all", list[TaskResponse])
-async def get_all(current_user:User = Depends(admin_required), db: Session = Depends(get_db)):
-    return db.query(Task).all()
+async def get_all(limit : int = 10, page : int = 1,current_user:User = Depends(admin_required), db: Session = Depends(get_db)):
+    offset = (page - 1)*limit 
+    return db.query(Task).offset(offset).limit(limit).all()
 
 @router.get("/", response_model= list[TaskResponse])
-async def get_by_filter(priority: str|None = None, status: str | None = None,current_user:User = Depends(auth_user), db:Session = Depends(get_db)):
-    
+async def get_by_filter(limit: int = 10, page : int = 1,priority: str|None = None, status: str | None = None,current_user:User = Depends(auth_user), db:Session = Depends(get_db)):
+    offset = ( page - 1 )*limit
     query = db.query(Task).filter(Task.user_id == current_user.id)
     if priority:
         query = query.filter(Task.priority == priority)
     if status:
         query = query.filter(Task.status == status)
-    return query.all()       
+    return query.offset(offset).limit(limit).all()       
 
 @router.get("/", response_model=list[TaskResponse])
-async def get_all_tasks(current_user:User = Depends(auth_user), db : Session = Depends(get_db)):
-    
-    tasks = db.query(Task).filter(Task.user_id == current_user.id).all()
+async def get_all_tasks(limit: int = 10, page : int = 1,current_user:User = Depends(auth_user), db : Session = Depends(get_db)):
+    offset = (page -1)*limit
+    tasks = db.query(Task).filter(Task.user_id == current_user.id).offset(offset).limit(limit).all()
     
     return tasks
 
@@ -63,6 +64,30 @@ async def get_single_task(id:int,current_user: User, db:Session = Depends(get_db
         raise HTTPException(status_code=403,detail="NOT AUTHORIZED")
     
     return task
+@router.get("/stats")
+async def get_stats(current_user:User = Depends(auth_user), db:Session=Depends(get_db)):
+    total_tasks = db.query(Task).filter(Task.user_id == current_user.id).count()
+    completed_tasks = db.query(Task).filter(Task.user_id == current_user.id, Task.status == "completed").count()
+    pending_tasks = total_tasks - completed_tasks
+    low_priority = db.query(Task).filter( Task.user_id == current_user.id, Task.priority == "low").count()
+    medium_priority = db.query(Task).filter( Task.user_id == current_user.id, Task.priority == "medium").count()
+    high_priority = db.query(Task).filter( Task.user_id == current_user.id, Task.priority == "high").count()
+    completion_rate = 0
+    if total_tasks > 0:
+        completion_rate = (completed_tasks/total_tasks)*100
+    return { "total_tasks": total_tasks,
+             "completed_tasks": completed_tasks,
+             "completion_rate":completion_rate,
+             "pending_tasks": pending_tasks,
+             "low_priority": low_priority,
+             "medium_priority":medium_priority,
+             "high_priority": high_priority
+             }    
+    
+    
+    
+    
+    
     
 @router.put("/{id}", response_model=TaskResponse)
 async def act_task(id:int,task_update :TaskUpdate,current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
