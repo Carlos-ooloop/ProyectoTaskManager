@@ -20,14 +20,31 @@ async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Dep
     new_task = Task( title = task.title,
                      description = task.description,
                      priority = task.priority,
-                     user_id = user.id)
+                     )
+    new_task.owner = user
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
     
     return new_task
 
+@router.get("/my-tasks", response_model= TaskResponse)
+async def get_my_task(current_user:User = Depends(auth_user)):
+    return current_user.tasks
 
+@router.get("/all", list[TaskResponse])
+async def get_all(current_user:User = Depends(admin_required), db: Session = Depends(get_db)):
+    return db.query(Task).all()
+
+@router.get("/", response_model= list[TaskResponse])
+async def get_by_filter(priority: str|None = None, status: str | None = None,current_user:User = Depends(auth_user), db:Session = Depends(get_db)):
+    
+    query = db.query(Task).filter(Task.user_id == current_user.id)
+    if priority:
+        query = query.filter(Task.priority == priority)
+    if status:
+        query = query.filter(Task.status == status)
+    return query.all()       
 
 @router.get("/", response_model=list[TaskResponse])
 async def get_all_tasks(current_user:User = Depends(auth_user), db : Session = Depends(get_db)):
@@ -77,6 +94,6 @@ async def delete_task(id:int,current_user:User = Depends(admin_required), db:Ses
         raise HTTPException(status_code= 403,detail="NOT AUTHORIZED")   
     db.delete(task)    
     db.commit()
-    return {"TASK ELIMINATED SUCCESSFULLY"}
+    return {"TASK ELIMINATED SUCCESSFULLY BY":current_user.username}
     
     
