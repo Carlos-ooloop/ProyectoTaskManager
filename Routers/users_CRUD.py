@@ -48,7 +48,7 @@ async def get_by_id( id:int, db : Session= Depends(get_db)):
 @router.put("/{id}", response_model= UserResponse, dependencies= [Depends(admin_required)])
 async def act_user(id:int ,user_act:UserUpdate, db:Session = Depends(get_db)):
     
-    user = db.query(User).filter(User.id == user_act.id).first()
+    user = db.query(User).filter(User.id == id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="USER NOT FOUND")
     if user_act.username is not None:

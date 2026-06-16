@@ -29,14 +29,20 @@ async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Dep
     
     return new_task
 
+
+
 @router.get("/my-tasks", response_model= TaskResponse)
 async def get_my_task(current_user:User = Depends(auth_user)):
     return current_user.tasks
+
+
 
 @router.get("/all", list[TaskResponse])
 async def get_all(limit : int = 10, page : int = 1,current_user:User = Depends(admin_required), db: Session = Depends(get_db)):
     offset = (page - 1)*limit 
     return db.query(Task).offset(offset).limit(limit).all()
+
+
 
 @router.get("/", response_model= list[TaskResponse])
 async def get_by_filter(limit: int = 10, page : int = 1,priority: str|None = None, status: str | None = None,current_user:User = Depends(auth_user), db:Session = Depends(get_db)):
@@ -46,7 +52,9 @@ async def get_by_filter(limit: int = 10, page : int = 1,priority: str|None = Non
         query = query.filter(Task.priority == priority)
     if status:
         query = query.filter(Task.status == status)
-    return query.offset(offset).limit(limit).all()       
+    return query.offset(offset).limit(limit).all()  
+
+     
 
 @router.get("/", response_model=list[TaskResponse])
 async def get_all_tasks(limit: int = 10, page : int = 1,current_user:User = Depends(auth_user), db : Session = Depends(get_db)):
@@ -54,6 +62,8 @@ async def get_all_tasks(limit: int = 10, page : int = 1,current_user:User = Depe
     tasks = db.query(Task).filter(Task.user_id == current_user.id).offset(offset).limit(limit).all()
     
     return tasks
+
+
 
 @router.get("/{id}", response_model=TaskResponse, dependencies=[Depends(auth_user)])
 async def get_single_task(id:int,current_user: User, db:Session = Depends(get_db)):
@@ -125,6 +135,9 @@ async def act_task(id:int,task_update :TaskUpdate,current_user:User = Depends(ad
     db.refresh(task)
     
     return task
+
+
+
 
 @router.delete("/{id}")
 async def delete_task(id:int,current_user:User = Depends(admin_required), db:Session = Depends(get_db)):

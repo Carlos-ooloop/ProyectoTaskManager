@@ -8,6 +8,7 @@ from db.database import get_db
 from models.user_model import User
 from models.refreshtoken_model import RefreshTokenRequest
 from schemas.user_schema import UserResponse
+from app.core.loggin import auth_logger
 
 router = APIRouter()
 SECRET = "c58c87349fe778beecdd92f9cd3467d1cf0fb829b747dac15787cc44d61e3298"
@@ -46,7 +47,7 @@ async def login(form:OAuth2PasswordRequestForm = Depends(), db:Session=Depends(g
         raise HTTPException(status_code=404,detail="USER NOT FOUND")
     
     if not verify_password(user.password,form.password):
-        raise HTTPException(status_code=401,detail="CONTRASEÑA INCORRECTA")
+        raise HTTPException(status_code=401,detail="CONTRASEÑA INCORRECTA")    
     
     acces_token = create_access_token({"sub":user.username,"role":user.role})
     refresh_token = create_refresh_token({"sub":user.username})
@@ -69,6 +70,8 @@ async def auth_user(token:str = Depends(oauth), db:Session=Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise HTTPException(status_code=404, detail="USER NOT FOUND")
+    
+    auth_logger.info(f"AUTH SUCCESS - USER_ID = {user.id}")
        
     return user
     
@@ -81,6 +84,7 @@ async def me(user_auth:User = Depends(auth_user)):
 
 async def admin_required(current_user:User = Depends(auth_user)):
  if current_user.role != "admin":
+        auth_logger.warning(f"USER {current_user.username} HAS NO PERMISSIONS")   
         raise HTTPException(status_code=403, detail="YOU NEDD ADMIN PERMISSION TO ACCESS TO THIS RESOURCES")
  return current_user
 
@@ -113,11 +117,12 @@ async def make_admin(current_user:User = Depends(admin_required), db:Session = D
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="USER IS ALREADY ADMIN")
     
+    auth_logger.info(f"USER : {user.username} NOW IS AN ADMIN")
     user.role = "admin"
     db.commit()
     db.refresh(user)
     
-    return {"INFO":f"{user.username} IS NOW ADMIN",
+    return {"INFO":f"{user.username} NOW IS AN ADMIN",
             "PROMOTED_BY":current_user.username}
     
     
@@ -132,6 +137,7 @@ async def remove_admin(current_user:User = Depends(admin_required), db:Session=D
     if current_user.id == user.id:
         raise HTTPException(status_code=400,detail="YOU CANNOT REMOVE YOUR OWN ADMIN ROLE")
     
+    auth_logger.info(f"USER {user.username} IS NO LONGER AN ADMIN")
     user.role = "user"
     db.commit()
     db.refresh(user)
