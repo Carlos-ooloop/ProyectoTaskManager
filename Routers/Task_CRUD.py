@@ -7,7 +7,7 @@ from schemas.Task_schema import TaskCreate, TaskResponse,TaskUpdate
 from schemas.user_schema import UserCreate,UserResponse,UserUpdate
 from utils.auth import hash_password , admin_required , auth_user
 from datetime import datetime
-
+from app.core.loggin import task_logger
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -22,9 +22,11 @@ async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Dep
                      description = task.description,
                      priority = task.priority,
                      )
+    
     new_task.owner = user
     db.add(new_task)
     db.commit()
+    task_logger.info(f"THE TASK TO THE USER: {user.username} , WAS SUCCESSFULLY AGGREGATE")
     db.refresh(new_task)
     
     return new_task
@@ -130,7 +132,8 @@ async def act_task(id:int,task_update :TaskUpdate,current_user:User = Depends(ad
      task.priority = task_update.priority
     if task_update.description:
      task.description = task_update.description
-    
+     
+    task_logger.info(f"THE ACTUALIZATION OF THE TASK {task.title} BY {current_user.username} WAS SUCCESSFULLY")
     db.commit()
     db.refresh(task)
     
@@ -151,6 +154,7 @@ async def delete_task(id:int,current_user:User = Depends(admin_required), db:Ses
         raise HTTPException(status_code= 403, detail="THIS TASK IS ALREADY DELETE") 
     task.is_deleted = True
     task.deleted_at = datetime.utcnow()  
+    task_logger.info(f"TASK: {task.title} WAS SUCCESSFULLY ELIMINATED BY {current_user.username}")
     db.commit()
     db.refresh(task)
     return {"TASK ELIMINATED SUCCESSFULLY BY":current_user.username}
