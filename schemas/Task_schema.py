@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,Field,validator
 from typing import Optional
 
 class TaskCreate(BaseModel):
-    title : str
+    title : str = Field(min_length= 3 , max_length=100)
     description :str
-    priority :str
+    priority :str = Field(min_length=3, le=20)
     
 class TaskResponse(TaskCreate):
     id : int 
@@ -15,4 +15,14 @@ class TaskUpdate (BaseModel):
     title : Optional[str] = None
     description : Optional[str] = None
     priority :Optional[str] = None   
-    status : Optional[str] = None    
+    status : Optional[str] = None
+    
+@validator("title")
+def no_empty(cls,v):
+    if not v.strip():
+        raise ValueError("TITLE CANNOT BE EMPTY")
+    return v    
+    
+    
+    
+        

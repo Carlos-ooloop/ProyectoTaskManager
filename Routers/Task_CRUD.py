@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.user_model import User
-from models.Task_model import Task
+from models.Task_model import Task, TaskStatus
 from schemas.Task_schema import TaskCreate, TaskResponse,TaskUpdate
 from schemas.user_schema import UserCreate,UserResponse,UserUpdate
 from utils.auth import hash_password , admin_required , auth_user
+from datetime import datetime
 
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -64,6 +65,9 @@ async def get_single_task(id:int,current_user: User, db:Session = Depends(get_db
         raise HTTPException(status_code=403,detail="NOT AUTHORIZED")
     
     return task
+
+
+
 @router.get("/stats")
 async def get_stats(current_user:User = Depends(auth_user), db:Session=Depends(get_db)):
     total_tasks = db.query(Task).filter(Task.user_id == current_user.id).count()
@@ -83,12 +87,25 @@ async def get_stats(current_user:User = Depends(auth_user), db:Session=Depends(g
              "medium_priority":medium_priority,
              "high_priority": high_priority
              }    
+
+
+
+@router.get("/dashboard") 
+async def dashboard(current_user:User = Depends (auth_user), db:Session = Depends(get_db)):
+    total_tasks = db.query(Task).filter(Task.is_deleted == False, Task.user_id == current_user.id).count()
+    completed_tasks = db.query(Task).filter(Task.is_deleted == False, Task.user_id == current_user.id,Task.status == TaskStatus.completed).count()
+    pending = db.query(Task).filter(Task.is_deleted == False, Task.user_id == current_user.id,Task.status == TaskStatus.pending).count()
+    in_progress = db.query(Task).filter(Task.is_deleted == False, Task.user_id == current_user.id,Task.status == TaskStatus.in_progress).count()
     
-    
-    
-    
-    
-    
+    return {  "total_tasks":total_tasks,
+              "completed_tasks":completed_tasks,
+              "pending_tasks": pending,
+              "in_progress_tasks": in_progress
+              }
+ 
+ 
+ 
+
 @router.put("/{id}", response_model=TaskResponse)
 async def act_task(id:int,task_update :TaskUpdate,current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
     
@@ -116,9 +133,13 @@ async def delete_task(id:int,current_user:User = Depends(admin_required), db:Ses
     if not task:
         raise HTTPException(status_code= 404, detail="TASK NOT FOUND")
     if task.user_id != current_user.id:
-        raise HTTPException(status_code= 403,detail="NOT AUTHORIZED")   
-    db.delete(task)    
+        raise HTTPException(status_code= 403,detail="NOT AUTHORIZED")
+    if task.is_deleted == True:
+        raise HTTPException(status_code= 403, detail="THIS TASK IS ALREADY DELETE") 
+    task.is_deleted = True
+    task.deleted_at = datetime.utcnow()  
     db.commit()
+    db.refresh(task)
     return {"TASK ELIMINATED SUCCESSFULLY BY":current_user.username}
     
     
