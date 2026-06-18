@@ -13,7 +13,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
 @router.post("/", response_model= TaskResponse)
-async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Depends(admin_required)):
+async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Depends(auth_user)):
     
     existing_task = db.query(Task).filter(Task.title == task.title, Task.user_id == user.id).first()
     if existing_task:
@@ -21,9 +21,10 @@ async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Dep
     new_task = Task( title = task.title,
                      description = task.description,
                      priority = task.priority,
+                     user_id = user.id
                      )
     
-    new_task.owner = user
+
     db.add(new_task)
     db.commit()
     task_logger.info(f"THE TASK TO THE USER: {user.username} , WAS SUCCESSFULLY AGGREGATE")

@@ -16,7 +16,7 @@ ALGORITHM = "HS256"
 TOKEN_DURATION = 30
 
 oauth = OAuth2PasswordBearer(tokenUrl="/login")
-pwd_context = CryptContext(schemes=["bcrypt"])
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated = "auto")
 
 
 def hash_password(password:str):
@@ -46,7 +46,7 @@ async def login(form:OAuth2PasswordRequestForm = Depends(), db:Session=Depends(g
     if not user:
         raise HTTPException(status_code=404,detail="USER NOT FOUND")
     
-    if not verify_password(user.password,form.password):
+    if not verify_password(form.password,user.password):
         raise HTTPException(status_code=401,detail="CONTRASEÑA INCORRECTA")    
     
     acces_token = create_access_token({"sub":user.username,"role":user.role})
@@ -107,9 +107,9 @@ async def refres_token(refresh_token:RefreshTokenRequest, db:Session = Depends(g
 
 
 @router.put("/make-admin/{id}")
-async def make_admin(current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
+async def make_admin(id:int,current_user:User = Depends(admin_required), db:Session = Depends(get_db)):
     
-    user = db.query(User).filter(User.id == current_user.id).first() 
+    user = db.query(User).filter(User.id == id).first() 
     
     if not user:
         raise HTTPException(status_code= 404, detail="USER NOT FOUND")

@@ -12,7 +12,7 @@ class TaskStatus(str, Enum):
 class TaskCreate(BaseModel):
     title : str = Field(min_length= 3 , max_length=100)
     description :str
-    priority :str = Field(min_length=3, le=20)
+    priority :int 
     
 class TaskResponse(TaskCreate):
     id : int 
