@@ -15,7 +15,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 @router.post("/", response_model= TaskResponse)
 async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Depends(admin_required)):
     
-    existing_task = db.query(Task).filter(Task.title == task.title, Task.user_id == user.id)
+    existing_task = db.query(Task).filter(Task.title == task.title, Task.user_id == user.id).first()
     if existing_task:
         raise HTTPException(status_code=401, detail="USER ALREADY HAS THIS TASK")
     new_task = Task( title = task.title,
@@ -33,13 +33,13 @@ async def add_task(task:TaskCreate,db:Session = Depends(get_db), user:User = Dep
 
 
 
-@router.get("/my-tasks", response_model= TaskResponse)
+@router.get("/my-tasks", response_model= list[TaskResponse])
 async def get_my_task(current_user:User = Depends(auth_user)):
     return current_user.tasks
 
 
 
-@router.get("/all", list[TaskResponse])
+@router.get("/all",response_model= list[TaskResponse])
 async def get_all(limit : int = 10, page : int = 1,current_user:User = Depends(admin_required), db: Session = Depends(get_db)):
     offset = (page - 1)*limit 
     return db.query(Task).offset(offset).limit(limit).all()
@@ -68,7 +68,7 @@ async def get_all_tasks(limit: int = 10, page : int = 1,current_user:User = Depe
 
 
 @router.get("/{id}", response_model=TaskResponse, dependencies=[Depends(auth_user)])
-async def get_single_task(id:int,current_user: User, db:Session = Depends(get_db)):
+async def get_single_task(id:int,current_user: User= Depends(auth_user), db:Session = Depends(get_db)):
     
     task = db.query(Task).filter(Task.id==id).first()
     if not task:

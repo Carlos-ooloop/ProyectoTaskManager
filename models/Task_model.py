@@ -1,16 +1,7 @@
 from db.database import Base
 from sqlalchemy import String,Integer,Column,ForeignKey,Enum,Boolean,DateTime
 from sqlalchemy.orm import relationship
-from enum import Enum
-
-
-class TaskStatus(str, Enum):
-    pending = "pending"
-    in_progress = "in_progress"
-    completed = "completed"
-
-
-
+from schemas.Task_schema import TaskStatus
 
 
 class Task(Base):

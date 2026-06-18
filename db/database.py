@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import declarative_base
 
-DATABASE_URL = ("mysql+pymysql://root:password@localhost/taskdb")
+DATABASE_URL = ("mysql+pymysql://root:Carlosa1974*@localhost/taskdb")
 
 engine = create_engine(DATABASE_URL)
 

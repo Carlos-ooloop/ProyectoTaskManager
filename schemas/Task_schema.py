@@ -1,5 +1,13 @@
 from pydantic import BaseModel,Field,validator
 from typing import Optional
+from enum import Enum
+
+
+class TaskStatus(str, Enum):
+    pending = "pending"
+    in_progress = "in_progress"
+    completed = "completed"
+    
 
 class TaskCreate(BaseModel):
     title : str = Field(min_length= 3 , max_length=100)
